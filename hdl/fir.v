@@ -46,9 +46,9 @@ module fir
 //========================== Declaration ==========================
 //-------------------------- Axi-Lite -------------------------------
   reg rvalid_next;
-  localparam WRITE = 0;
-  localparam READ = 1;
-  localparam IDLE = 2;
+  localparam WRITE = 2'b00;
+  localparam READ = 2'b01;
+  localparam IDLE = 2'b10;
   localparam NULL_ADDR = 12'h90;
   reg [1:0] axi_state; 
   reg [1:0] axi_state_next; //1.first read -> wait write 2. read/write same time -> if not wait/waiting -> write/read 3.
@@ -72,7 +72,10 @@ module fir
   reg read_tap;
   reg read_tap_next;
   reg [(pDATA_WIDTH-1):0] data_length;
-  reg [5:0] tap_length;
+  reg [(pDATA_WIDTH-1):0] data_length_next;
+  reg [5:0] tap_length; //[(pDATA_WIDTH-1):0]
+  reg [5:0] tap_length_next;
+  wire [(pDATA_WIDTH-1):0] tap_length_large;
   reg axi_lite_on;
   reg tap_EN_all;
   reg [3:0] tap_WE_all;
@@ -88,9 +91,9 @@ module fir
 //-------------------------- Axi-Stream SS (input X) -------------------------------
   reg [1:0] ss_state;
   reg [1:0] ss_state_next;
-  localparam IDLE_SS = 2;
-  localparam READ_SS = 1;
-  localparam WRITE_SS = 0;
+  localparam IDLE_SS = 2'b10;
+  localparam READ_SS = 2'b01;
+  localparam WRITE_SS = 2'b00;
   reg [(pADDR_WIDTH-1):0] data_A_tmp;
   reg [(pDATA_WIDTH-1):0] data_Di_tmp;
   reg data_EN_tmp;
@@ -118,6 +121,10 @@ module fir
   reg wait_sm_next;
   reg [1:0] toread_y_cnt;
   reg [1:0] toread_y_cnt_next;
+  reg [(pDATA_WIDTH-1):0] stop_early_next;
+  reg [(pDATA_WIDTH-1):0] stop_early;
+  reg lock_off;
+  reg lock_off_next;
 //-------------------------- Axi-Stream SM (input Y) -------------------------------
   reg sm_tvalid_tmp;
   reg sm_tvalid_next;
@@ -192,6 +199,8 @@ module fir
       write_tap <= 1;
       read_tap <= 1;
       done_read <= 0;
+      data_length <= 0;
+      tap_length <= 0;
     end else begin
       axi_state <= axi_state_next;
       araddr_tmp <= araddr_next;
@@ -199,6 +208,8 @@ module fir
       write_tap <= write_tap_next;
       read_tap <= read_tap_next;
       done_read <= done_read_next;
+      data_length <= data_length_next;
+      tap_length <= tap_length_next;
     end
   end
 
@@ -234,6 +245,7 @@ module fir
       rdata_tmp = 32'd0;
       rvalid_next = 0;
       arready_tmp = 0;
+      done_read_next = done_read;
       if (!ap_ctrl[2] && write_tap) begin  
         wready_tmp = 1;
         awready_tmp = 1;
@@ -243,6 +255,9 @@ module fir
         tap_Di_tmp = wdata;
         axi_state_finish = 1;
         write_alr = 1;
+        data_length_next = data_length;
+        tap_length_next = tap_length;
+        ap_start_next = 0; //ap_ctrl[0]
       end else if (write_tap == 1) begin
         wready_tmp = 1;
         awready_tmp = 1;
@@ -252,23 +267,41 @@ module fir
         tap_Di_tmp = wdata;
         axi_state_finish = 1;
         write_alr = 1;
+        data_length_next = data_length;
+        tap_length_next = tap_length;
+        ap_start_next = 0; //ap_ctrl[0]
       end else begin
+        tap_EN_tmp = 0;
+        tap_WE_tmp = 0;
+        tap_A_tmp = NULL_ADDR;
+        tap_Di_tmp = 0;
         if (awaddr_tmp == 12'h10) begin
           wready_tmp = 1;
           awready_tmp = 1;
-          data_length = wdata;
+          data_length_next = wdata; //ERROR
+          tap_length_next = tap_length;
           axi_state_finish = 1;
           write_alr = 1;
+          ap_start_next = 0; //ap_ctrl[0]
         end else if (awaddr_tmp == 12'h14) begin
           wready_tmp = 1;
           awready_tmp = 1;
-          tap_length = wdata;
+          data_length_next = data_length;
+          tap_length_next = wdata; //ERROR
           axi_state_finish = 1;
           write_alr = 1;
+          ap_start_next = 0; //ap_ctrl[0]
         end else begin
           wready_tmp = 1;
           awready_tmp = 1;
-          ap_ctrl = wdata & (3'b011);
+          data_length_next = data_length;
+          tap_length_next = tap_length;
+          //ap_start_next = 1; //ERROR wdata & (3'b011)
+          if (!ap_ctrl[2]) begin
+            ap_start_next = 0;
+          end else begin
+            ap_start_next = 1;
+          end
           axi_state_finish = 1;
           write_alr = 1;
         end
@@ -281,7 +314,11 @@ module fir
       wready_tmp = 0;
       awready_tmp = 0;
       arready_tmp = 1;
+      data_length_next = data_length;
+      tap_length_next = tap_length;
+      ap_start_next = 0; //ap_ctrl[0]
       if ((!ap_ctrl[2] || (araddr_tmp == NULL_ADDR)) && read_tap) begin
+        done_read_next = done_read;
         if (arready && arvalid) begin
           rdata_tmp = 32'd0;
           rvalid_next = 1;
@@ -308,6 +345,10 @@ module fir
           axi_state_finish = 0;
         end
       end else if (!read_tap) begin
+        tap_EN_tmp = 0;
+        tap_WE_tmp = 0;
+        tap_A_tmp = NULL_ADDR;
+        tap_Di_tmp = 0;
         if (arready && arvalid) begin
           rdata_tmp = 32'd0;
           rvalid_next = 1;
@@ -317,7 +358,11 @@ module fir
           rvalid_next = 0;
           rdata_tmp = ap_ctrl;
           axi_state_finish = 1;
-          done_read_next = 1;
+          if (data_cnt >= stop_early) begin
+            done_read_next = 1;
+          end else begin
+            done_read_next = 0;
+          end
         end else begin
           rdata_tmp = 32'd0;
           rvalid_next = rvalid_tmp;
@@ -325,6 +370,7 @@ module fir
           done_read_next = done_read;
         end
       end else begin
+        done_read_next = done_read;
         if (arready && arvalid) begin
           rdata_tmp = 32'd0;
           rvalid_next = 1;
@@ -366,6 +412,10 @@ module fir
       wready_tmp = 0;
       awready_tmp = 0;
       axi_state_finish = 1;
+      data_length_next = data_length;
+      tap_length_next = tap_length;
+      ap_start_next = 0; //ap_ctrl[0]
+      done_read_next = done_read;
     end
 
     default: begin
@@ -381,6 +431,10 @@ module fir
       wready_tmp = 0;
       awready_tmp = 0;
       axi_state_finish = 1;
+      data_length_next = data_length;
+      tap_length_next = tap_length;
+      ap_start_next = 0; //ap_ctrl[0]
+      done_read_next = done_read;
     end
     endcase
   end
@@ -440,12 +494,6 @@ module fir
     end else begin
       ap_done_next = ap_ctrl[1];
     end
-
-    if (!ap_ctrl[2]) begin
-      ap_start_next = 0;
-    end else begin
-      ap_start_next = ap_ctrl[0];
-    end
   end
 
 //-------------------------- Axi-Stream SS (input X) -------------------------------
@@ -458,6 +506,8 @@ module fir
       read_should <= 0;
       current <= 0;
       wait_sm <= 0;
+      stop_early <= (1 << pDATA_WIDTH) - 1;
+      lock_off <= 1;
     end else begin
       data_cnt <= data_cnt_next;
       ss_state <= ss_state_next;
@@ -465,11 +515,15 @@ module fir
       read_should <= read_should_next;
       current <= current_next;
       wait_sm <= wait_sm_next;
+      stop_early <= stop_early_next;
+      lock_off <= lock_off_next;
     end
   end
 
+  assign tap_length_large = tap_length;
+
   always @(*) begin
-    if (data_cnt < tap_length) begin
+    if (data_cnt < tap_length_large) begin
       operation = data_cnt;
     end else begin
       operation = tap_length - 1;
@@ -477,9 +531,21 @@ module fir
   end
 
   always @(*) begin
-    if (data_cnt <= data_length && !ap_ctrl[2]) begin  // wait_sm to let y_tmp get //&& !ss_tlast
+    if (ss_tlast && lock_off) begin
+      stop_early_next = data_cnt + 1;
+      lock_off_next = 0; 
+    end else begin
+      stop_early_next = stop_early;
+      lock_off_next = lock_off;
+    end
+  end
+
+  //reg [4:0] debug_ss;
+  always @(*) begin
+    if ((data_cnt <= data_length) && (data_cnt <= stop_early) && !ap_ctrl[2]) begin  // wait_sm to let y_tmp get //&& !ss_tlast
       ss_on = 1;
-      if (ss_tvalid && data_cnt == 0) begin
+      //debug_ss = 1;
+      if (ss_tvalid && data_cnt == 0 && ss_tdata != 0) begin
         ss_state_next = WRITE_SS;
         data_cnt_next = data_cnt + 1;
         ss_tready_next = 1;
@@ -487,12 +553,14 @@ module fir
         addr_genr_next = 0;
         tap_genr_next = 0; //(tap_length - 1) << 2
         wait_sm_next = 1;
-      end else if (ss_tvalid && (current == operation)) begin
+        //debug_ss = 0;
+      end else if (ss_tvalid && (current == operation) && ss_tdata != 0) begin
         ss_state_next = WRITE_SS;
         data_cnt_next = data_cnt + 1;
         ss_tready_next = 1;
         current_next = 0;
         wait_sm_next = 1;
+        //debug_ss = 1;
         if (addr_genr == ((tap_length - 1) << 2)) begin
           addr_genr_next = 0;
         end else begin
@@ -509,7 +577,8 @@ module fir
         ss_tready_next = 0;
         current_next = current + 1;
         wait_sm_next = 0;
-        if (data_cnt < tap_length) begin
+        //debug_ss = 2;
+        if (data_cnt < tap_length_large) begin
           addr_genr_next = current;
           tap_genr_next = (operation * 3'd4); //((tap_length - 1) << 2) - (operation * 3'd4)
         end else begin
@@ -522,6 +591,7 @@ module fir
         ss_tready_next = 0;
         current_next = current + 1;
         wait_sm_next = 0;
+        //debug_ss = 3;
         if (addr_genr == ((tap_length - 1) << 2)) begin
           addr_genr_next = 0;
         end else begin
@@ -540,6 +610,7 @@ module fir
         addr_genr_next = addr_genr;
         tap_genr_next = tap_genr;
         wait_sm_next = 0;
+        //debug_ss = 4;
       end
     end else begin
       ss_state_next = IDLE_SS;
@@ -549,6 +620,8 @@ module fir
       ss_on = 0;
       addr_genr_next = NULL_ADDR;
       tap_genr_next = NULL_ADDR;
+      wait_sm_next = 0;
+      //debug_ss = 5;
     end
   end
 
@@ -621,11 +694,13 @@ module fir
         data_Di_tmp = 0;
         data_EN_tmp = 0;
         data_WE_tmp = 0;
+        data_in_conv = 0;
 
         tap_A_ss = NULL_ADDR;
         tap_Di_ss = 0;
         tap_WE_ss = 0;
         tap_EN_ss = 0;
+        tap_in_conv = 0;
         read_should_next = 0;
       end
     endcase
@@ -639,7 +714,7 @@ module fir
   
   assign sm_tdata = sm_tdata_tmp;
   assign sm_tvalid = sm_tvalid_tmp;
-  assign sm_tlast = ((data_cnt >= data_length) && send_should) ? 1 : 0;
+  assign sm_tlast = ((data_cnt >= stop_early) && send_should) ? 1 : 0; //(data_cnt >= data_length)
 
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (!axis_rst_n) begin
@@ -658,7 +733,7 @@ module fir
   end
 
   always @(*) begin
-    if (!ap_ctrl[2]) begin //sm_tlast
+    if (!ap_ctrl[2] && (data_cnt <= stop_early)) begin //sm_tlast
       if (sm_tready && send_should || sm_tready && send_waiting) begin // && !(data_count <= tap_length)  current == 2
         sm_tvalid_next = 1;
         sm_tdata_next = output_final;
@@ -677,6 +752,12 @@ module fir
       sm_tdata_next = 0;
       send_waiting_next = 0;
     end
+    /*else if (!ap_ctrl[2] && sm_tready) begin
+      sm_tvalid_next = 1;
+      sm_tdata_next = 0;
+      send_waiting_next = 0;
+    end
+    */
   end
 
 //-------------------------- FIR convolution -------------------------------
