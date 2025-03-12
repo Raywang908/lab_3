@@ -216,6 +216,7 @@ module fir
   assign rvalid = rvalid_tmp;
   assign arready = arready_tmp;
 
+
   always @(*) begin
     if (arvalid && awvalid && wvalid && axi_state_finish) begin
       if (write_alr) begin
@@ -278,7 +279,11 @@ module fir
         if (awaddr_tmp == 12'h10) begin
           wready_tmp = 1;
           awready_tmp = 1;
-          data_length_next = wdata; //ERROR
+          if (!ap_ctrl[2]) begin
+            data_length_next = data_length;
+          end else begin
+            data_length_next = wdata; //ERROR
+          end
           tap_length_next = tap_length;
           axi_state_finish = 1;
           write_alr = 1;
@@ -287,7 +292,11 @@ module fir
           wready_tmp = 1;
           awready_tmp = 1;
           data_length_next = data_length;
-          tap_length_next = wdata; //ERROR
+          if (!ap_ctrl[2]) begin
+            tap_length_next = tap_length;
+          end else begin
+            tap_length_next = wdata; //ERROR
+          end
           axi_state_finish = 1;
           write_alr = 1;
           ap_start_next = 0; //ap_ctrl[0]
@@ -356,7 +365,13 @@ module fir
           done_read_next = 0;
         end else if (rready && rvalid) begin
           rvalid_next = 0;
-          rdata_tmp = ap_ctrl;
+          if (araddr_tmp == 12'h10) begin
+            rdata_tmp = data_length;
+          end else if (araddr_tmp == 12'h14) begin
+            rdata_tmp = tap_length;
+          end else begin
+            rdata_tmp = ap_ctrl;
+          end
           axi_state_finish = 1;
           if (data_cnt >= stop_early) begin
             done_read_next = 1;
@@ -554,7 +569,7 @@ module fir
         tap_genr_next = 0; //(tap_length - 1) << 2
         wait_sm_next = 1;
         //debug_ss = 0;
-      end else if (ss_tvalid && (current == operation) && ss_tdata != 0) begin
+      end else if (ss_tvalid && (current == operation) && ss_tdata != 0 && !send_waiting) begin //!send_waiting
         ss_state_next = WRITE_SS;
         data_cnt_next = data_cnt + 1;
         ss_tready_next = 1;
@@ -714,7 +729,7 @@ module fir
   
   assign sm_tdata = sm_tdata_tmp;
   assign sm_tvalid = sm_tvalid_tmp;
-  assign sm_tlast = ((data_cnt >= stop_early) && send_should) ? 1 : 0; //(data_cnt >= data_length)
+  assign sm_tlast = ((data_cnt >= stop_early) && sm_tvalid) ? 1 : 0; //&& send_should
 
   always @(posedge axis_clk or negedge axis_rst_n) begin
     if (!axis_rst_n) begin
@@ -734,7 +749,7 @@ module fir
 
   always @(*) begin
     if (!ap_ctrl[2] && (data_cnt <= stop_early)) begin //sm_tlast
-      if (sm_tready && send_should || sm_tready && send_waiting) begin // && !(data_count <= tap_length)  current == 2
+      if (sm_tready && send_should || sm_tready && send_waiting) begin // 
         sm_tvalid_next = 1;
         sm_tdata_next = output_final;
         send_waiting_next = 0;
