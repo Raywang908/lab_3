@@ -1,0 +1,35 @@
+ 
+****************************************
+Report : power
+        -hier
+        -analysis_effort low
+Design : fir
+Version: R-2020.09-SP5
+Date   : Fri Mar 14 21:07:55 2025
+****************************************
+
+
+Library(s) Used:
+
+    slow (File: /usr/cadtool/ee5216/CBDK_TSMC90GUTM_Arm_f1.0/CIC/SynopsysDC/db/slow.db)
+
+
+Operating Conditions: slow   Library: slow
+Wire Load Model Mode: top
+
+
+Global Operating Voltage = 0.9  
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1pW
+
+
+--------------------------------------------------------------------------------
+                                       Switch   Int      Leak     Total
+Hierarchy                              Power    Power    Power    Power    %
+--------------------------------------------------------------------------------
+fir                                       0.424    0.584 1.20e+08    1.128 100.0
+1

@@ -1,0 +1,33 @@
+ 
+****************************************
+check_design summary:
+Version:     R-2020.09-SP5
+Date:        Fri Mar 14 21:03:37 2025
+****************************************
+
+                   Name                                            Total
+--------------------------------------------------------------------------------
+Inputs/Outputs                                                      1
+    Shorted outputs (LINT-31)                                       1
+
+Cells                                                              15
+    Cells do not drive (LINT-1)                                    15
+--------------------------------------------------------------------------------
+
+Warning: In design 'fir', cell 'C3176' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'B_44' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'B_45' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3234' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3238' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3241' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3242' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3246' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3250' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3253' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3254' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3259' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3263' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'C3267' does not drive any nets. (LINT-1)
+Warning: In design 'fir', cell 'B_49' does not drive any nets. (LINT-1)
+Warning: In design 'fir', output port 'awready' is connected directly to output port 'wready'. (LINT-31)
+1
