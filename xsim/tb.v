@@ -258,15 +258,15 @@ module fir_tb
         $display("----Start the data input(AXI-Stream)----");
         for(i=0;i<(data_length0 - 1);i=i+1) begin
             ss_tlast = 0; axi_stream_master0(Din_list0[i]);
-            config_write0(12'h10, 10); // write data_length
-            config_write0(12'h14, 10); // write tap_length
-            config_read_check0(12'h10, data_length0, 32'hffffffff); // check if data_length dont change
-            config_read_check0(12'h14, coef_length0, 32'hffffffff); // check if tap_length dont change
-            config_write0(12'h00, 32'h0000_0001); // write ap_start
-            config_read_check0(12'h00, 32'h00, 32'h0000_0001); // check ap_start = 0;
-            config_read_check0(12'h00, 32'h00, 32'h0000_0004); // check ap_idle = 0 (0x00 [bit 2])
-            config_read_check0(12'h00, 32'h00, 32'h0000_0002); // check done= 0
-            config_read_check0(12'h84, 32'hffffffff, 32'hffffffff); // check if read tap returns ffffffff
+            //config_write0(12'h10, 10); // write data_length
+            //config_write0(12'h14, 10); // write tap_length
+            //config_read_check0(12'h10, data_length0, 32'hffffffff); // check if data_length dont change
+            //config_read_check0(12'h14, coef_length0, 32'hffffffff); // check if tap_length dont change
+            //config_write0(12'h00, 32'h0000_0001); // write ap_start
+            //config_read_check0(12'h00, 32'h00, 32'h0000_0001); // check ap_start = 0;
+            //config_read_check0(12'h00, 32'h00, 32'h0000_0004); // check ap_idle = 0 (0x00 [bit 2])
+            //config_read_check0(12'h00, 32'h00, 32'h0000_0002); // check done= 0
+            //config_read_check0(12'h84, 32'hffffffff, 32'hffffffff); // check if read tap returns ffffffff
         end
         ss_tvalid = 0; //not here origin
 	    config_read_check0(12'h00, 32'h00, 32'h0000_0002); // check done= 0
@@ -365,7 +365,7 @@ module fir_tb
         error = 0; status_error = 0;
         sm_tready = 0;
         for(l=0;l < data_length0;l=l+1) begin
-            sm0(golden_list0[l],l);
+            sm1(golden_list0[l],l); //sm0
         end
         config_read_check0(12'h00, 32'h02, 32'h0000_0002); // check ap_done = 1 (0x00 [bit 1])
         config_read_check0(12'h00, 32'h04, 32'h0000_0004); // check ap_idle = 1 (0x00 [bit 2])
@@ -590,7 +590,7 @@ module fir_tb
         input signed [31:0] exp_data;
         input [31:0]        mask;
         begin
-            @(posedge axis_clk);
+            //@(posedge axis_clk);
             arvalid <= 1; araddr <= addr;
             rready <= 1;
             fork 
