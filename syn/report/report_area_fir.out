@@ -3,7 +3,7 @@
 Report : area
 Design : fir
 Version: R-2020.09-SP5
-Date   : Fri Mar 14 21:07:55 2025
+Date   : Sun Mar 16 11:02:14 2025
 ****************************************
 
 Library(s) Used:
@@ -11,21 +11,21 @@ Library(s) Used:
     slow (File: /usr/cadtool/ee5216/CBDK_TSMC90GUTM_Arm_f1.0/CIC/SynopsysDC/db/slow.db)
 
 Number of ports:                          330
-Number of nets:                          6241
-Number of cells:                         5512
-Number of combinational cells:           5227
+Number of nets:                          6137
+Number of cells:                         5369
+Number of combinational cells:           5084
 Number of sequential cells:               283
 Number of macros/black boxes:               0
-Number of buf/inv:                        779
-Number of references:                     130
+Number of buf/inv:                        727
+Number of references:                     127
 
-Combinational area:              29283.105859
-Buf/Inv area:                     2898.604855
-Noncombinational area:            4370.486432
+Combinational area:              28976.875447
+Buf/Inv area:                     2771.596851
+Noncombinational area:            4435.401616
 Macro/Black Box area:                0.000000
 Net Interconnect area:      undefined  (No wire load specified)
 
-Total cell area:                 33653.592291
+Total cell area:                 33412.277063
 Total area:                 undefined
 
 Hierarchical area distribution
@@ -36,8 +36,8 @@ Hierarchical area distribution
 Hierarchical cell                 Absolute    Percent  Combi-      Noncombi-  Black-
                                   Total       Total    national    national   boxes   Design
 --------------------------------  ----------  -------  ----------  ---------  ------  ---------
-fir                               33653.5923    100.0  29283.1059  4370.4864  0.0000  fir
+fir                               33412.2771    100.0  28976.8754  4435.4016  0.0000  fir
 --------------------------------  ----------  -------  ----------  ---------  ------  ---------
-Total                                                  29283.1059  4370.4864  0.0000
+Total                                                  28976.8754  4435.4016  0.0000
 
 1
