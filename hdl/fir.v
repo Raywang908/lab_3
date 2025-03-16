@@ -570,7 +570,7 @@ module fir
         tap_genr_next = 0; //(tap_length - 1) << 2
         wait_sm_next = 1;
         //debug_ss = 0;
-      end else if (ss_tvalid && (current == operation) && ss_tdata != 0 && !send_waiting_next) begin //!send_waiting
+      end else if (ss_tvalid && (current == operation) && !send_waiting_next) begin //!send_waiting && ss_tdata != 0
         ss_state_next = WRITE_SS;
         data_cnt_next = data_cnt + 1;
         ss_tready_next = 1;
