@@ -207,13 +207,16 @@ module fir
 
 
   always @(*) begin
+    /*
     if (arvalid && awvalid && wvalid && axi_state_finish) begin
       if (write_alr) begin
         axi_state_next = READ;
       end else begin
         axi_state_next = WRITE;
       end
-    end else if (awvalid && wvalid && axi_state_finish) begin
+    end else 
+    */
+    if (awvalid && wvalid && axi_state_finish) begin
       if (write_alr) begin
         axi_state_next = IDLE;
       end else begin
@@ -271,7 +274,7 @@ module fir
           if (!ap_ctrl[2]) begin
             data_length_next = data_length;
           end else begin
-            data_length_next = wdata; //ERROR
+            data_length_next = wdata; 
           end
           tap_length_next = tap_length;
           axi_state_finish = 1;
@@ -284,7 +287,7 @@ module fir
           if (!ap_ctrl[2]) begin
             tap_length_next = tap_length;
           end else begin
-            tap_length_next = wdata; //ERROR
+            tap_length_next = wdata; 
           end
           axi_state_finish = 1;
           write_alr = 1;
@@ -294,7 +297,7 @@ module fir
           awready_tmp = 1;
           data_length_next = data_length;
           tap_length_next = tap_length;
-          //ap_start_next = 1; //ERROR wdata & (3'b011)
+          //ap_start_next = 1; 
           if (!ap_ctrl[2]) begin
             ap_start_next = 0;
           end else begin
@@ -315,7 +318,7 @@ module fir
       data_length_next = data_length;
       tap_length_next = tap_length;
       ap_start_next = 0; //ap_ctrl[0]
-      if ((!ap_ctrl[2] || (araddr_tmp == NULL_ADDR)) && read_tap) begin
+      if (!ap_ctrl[2] && read_tap) begin //(!ap_ctrl[2] || (araddr_tmp == NULL_ADDR))
         done_read_next = 0; //done_read_next = done_read;
         if (arvalid) begin //arready && arvalid
           arready_tmp = 1;
@@ -558,7 +561,7 @@ module fir
 
   //reg [4:0] debug_ss;
   always @(*) begin
-    if ((data_cnt <= data_length) && (data_cnt <= stop_early) && !ap_ctrl[2]) begin  // wait_sm to let y_tmp get //&& !ss_tlast
+    if ((data_cnt <= stop_early) && !ap_ctrl[2]) begin  // wait_sm to let y_tmp get //&& !ss_tlast // (data_cnt <= data_length) &&
       ss_on = 1;
       //debug_ss = 1;
       if (ss_tvalid && data_cnt == 0 && ss_tdata != 0) begin
@@ -596,9 +599,9 @@ module fir
         //debug_ss = 2;
         if (data_cnt < tap_length_large) begin
           addr_genr_next = current;
-          tap_genr_next = (operation * 3'd4); //((tap_length - 1) << 2) - (operation * 3'd4)
+          tap_genr_next = (operation << 2); //operation * 3'd4
         end else begin
-          addr_genr_next = ((data_cnt - tap_length + 1) % tap_length) * 3'd4;
+          addr_genr_next = ((data_cnt - tap_length + 1) % tap_length) << 2; //((data_cnt - tap_length + 1) % tap_length) * 3'd4
           tap_genr_next = ((tap_length - 1) << 2); //0
         end
       end else if (current < operation && !wait_sm && !send_waiting_next) begin
@@ -772,12 +775,6 @@ module fir
       sm_tdata_next = 0;
       send_waiting_next = 0;
     end
-    /*else if (!ap_ctrl[2] && sm_tready) begin
-      sm_tvalid_next = 1;
-      sm_tdata_next = 0;
-      send_waiting_next = 0;
-    end
-    */
   end
 
 //-------------------------- FIR convolution -------------------------------
@@ -796,7 +793,7 @@ module fir
   end
 
   always @(*) begin
-    if (toread_y_cnt == 2 && !(y_tmp == 0)) begin // ss_state_next == WRITE_SS not write
+    if (toread_y_cnt == 2) begin //&& !(y_tmp == 0)
       y_next = y_tmp;
       send_should_next = 1;
     end else begin
